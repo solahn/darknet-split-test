@@ -374,7 +374,7 @@ void forward_network(network net, network_state state) {
 		if (i == net.n - net.split_number) {
 			printf("============================================\n");
 			char filename_save[50];
-			snprintf(filename_save, sizeof(filename_save), "last_layer_input_%d.txt", net.data_number);
+			snprintf(filename_save, sizeof(filename_save), "./nn_split_test/last_layer_input_%d.txt", net.data_number);
 			save_layer_input_to_file(state.input, l.outputs * l.batch, filename_save);
 			printf("1. [-%d] Saved original input for layer %d at %s\n", net.split_number, i, filename_save);
 			
@@ -402,28 +402,27 @@ void forward_network(network net, network_state state) {
     else {
 	    printf("============================================\n");
 	    const char *input_filenames[] = {
-		"./last_layer_input_/last_layer_input_1_.txt",
-		"./last_layer_input_/last_layer_input_2_.txt",
-		"./last_layer_input_/last_layer_input_3_.txt",
-		"./last_layer_input_/last_layer_input_4_.txt",
-		"./last_layer_input_/last_layer_input_5_.txt",
-		"./last_layer_input_/last_layer_input_6_.txt",
-		"./last_layer_input_/last_layer_input_7_.txt",
-		"./last_layer_input_/last_layer_input_8_.txt",
-		"./last_layer_input_/last_layer_input_9_.txt"
+		"./nn_split_test/last_layer_input_1.txt",
+		"./nn_split_test/last_layer_input_2.txt",
+		"./nn_split_test/last_layer_input_3.txt",
+		"./nn_split_test/last_layer_input_4.txt",
+		"./nn_split_test/last_layer_input_5.txt",
+		"./nn_split_test/last_layer_input_6.txt",
+		"./nn_split_test/last_layer_input_7.txt",
+		"./nn_split_test/last_layer_input_8.txt",
+		"./nn_split_test/last_layer_input_9.txt"
 	    };
 	    int size_per_file = get_size_per_file(net, net.split_number);
-	    combine_compressed_inputs("combined_last_layer_input.bin", input_filenames, size_per_file);
+	    const char *combine_filename = "./nn_split_test/combined_last_layer_input.bin";
+	    combine_compressed_inputs(combine_filename, input_filenames, size_per_file);
 	    printf("1. Combine 9 inputs for %d layer\n", net.n - net.split_number);
 	    printf("============================================\n");
-	    
-	    const char *filename = "combined_last_layer_input.bin";
 
 	    // 마지막 레이어 input 로드
 	    layer last_layer = net.layers[net.n - net.split_number];
-	    float *custom_input = load_layer_input_from_file(filename, last_layer.outputs * last_layer.batch);
+	    float *custom_input = load_layer_input_from_file(combine_filename, last_layer.outputs * last_layer.batch);
 	    if (!custom_input) {
-		fprintf(stderr, "Error loading custom input from file: %s\n", filename);
+		fprintf(stderr, "Error loading custom input from file: %s\n", combine_filename);
 		return;
 	    }
 

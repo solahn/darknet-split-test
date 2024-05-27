@@ -383,13 +383,14 @@ void forward_network(network net, network_state state) {
 		memcpy(l.output, custom_input, l.outputs * l.batch * sizeof(float));
 		state.input = custom_input;
 		printf("Replaced last layer input at layer %d at %s\n", i, filename_save);
+		
+		free(custom_input);
         } 
         else {
 		state.input = l.output;
         }
     }
 
-    //free(custom_input);
 }
 
 void update_network(network net)

@@ -371,18 +371,24 @@ void forward_network(network net, network_state state) {
         state.input = l.output;
         
         if (i == net.n - 1) {
+        	printf("============================================\n");
 		const char *filename_save = "last_layer_input_5.txt";
 		save_layer_input_to_file(state.input, l.outputs * l.batch, filename_save);
-
+		printf("1. Saved original input for layer %d at %s\n", i, filename_save);
+		
+		printf("============================================\n");
 		float *custom_input = load_layer_input_from_file(filename_save, l.outputs * l.batch);
 		if (!custom_input) {
 			fprintf(stderr, "Error loading custom input from file: %s\n", filename_save);
 			return;
 		}
-		printf("Loaded custom input for last layer\n");
+
+		printf("2. Loaded custom input for layer %d at %s\n", i, filename_save);
+		printf("============================================\n");
 		memcpy(l.output, custom_input, l.outputs * l.batch * sizeof(float));
 		state.input = custom_input;
-		printf("Replaced last layer input at layer %d at %s\n", i, filename_save);
+		printf("3. Replaced last layer input at layer %d at %s\n", i, filename_save);
+		printf("============================================\n");
 		
 		free(custom_input);
         } 

@@ -291,11 +291,19 @@ void save_network_state(network_state state, const char *prefix) {
     }
 
     fwrite(&state.index, sizeof(int), 1, fp);
-    fwrite(state.input, sizeof(float), state.net.inputs * state.net.batch, fp);
-    fwrite(state.truth, sizeof(float), state.net.truths * state.net.batch, fp);
-    fwrite(state.delta, sizeof(float), state.net.outputs * state.net.batch, fp);
+    if (state.input) {
+        fwrite(state.input, sizeof(float), state.net.inputs * state.net.batch, fp);
+    }
+    if (state.truth) {
+        fwrite(state.truth, sizeof(float), state.net.truths * state.net.batch, fp);
+    }
+    if (state.delta) {
+        fwrite(state.delta, sizeof(float), state.net.outputs * state.net.batch, fp);
+    }
     size_t workspace_size = get_max_workspace_size(state.net);
-    fwrite(state.workspace, 1, workspace_size, fp);
+    if (state.workspace) {
+        fwrite(state.workspace, 1, workspace_size, fp);
+    }
     fclose(fp);
 }
 
@@ -312,18 +320,6 @@ void save_entire_network(network net, const char *prefix) {
     }
 
     fwrite(&net, sizeof(network), 1, fp);
-
-    for (int i = 0; i < net.n; ++i) {
-        layer l = net.layers[i];
-        fwrite(l.biases, sizeof(float), l.n, fp);
-        fwrite(l.weights, sizeof(float), l.nweights, fp);
-        if (l.batch_normalize) {
-            fwrite(l.scales, sizeof(float), l.n, fp);
-            fwrite(l.rolling_mean, sizeof(float), l.n, fp);
-            fwrite(l.rolling_variance, sizeof(float), l.n, fp);
-        }
-    }
-
     fclose(fp);
 }
 
@@ -340,11 +336,19 @@ void load_network_state(network_state state, const char *prefix) {
     }
 
     fread(&state.index, sizeof(int), 1, fp);
-    fread(state.input, sizeof(float), state.net.inputs * state.net.batch, fp);
-    fread(state.truth, sizeof(float), state.net.truths * state.net.batch, fp);
-    fread(state.delta, sizeof(float), state.net.outputs * state.net.batch, fp);
+    if (state.input) {
+        fread(state.input, sizeof(float), state.net.inputs * state.net.batch, fp);
+    }
+    if (state.truth) {
+        fread(state.truth, sizeof(float), state.net.truths * state.net.batch, fp);
+    }
+    if (state.delta) {
+        fread(state.delta, sizeof(float), state.net.outputs * state.net.batch, fp);
+    }
     size_t workspace_size = get_max_workspace_size(state.net);
-    fread(state.workspace, 1, workspace_size, fp);
+    if (state.workspace) {
+        fread(state.workspace, 1, workspace_size, fp);
+    }
     fclose(fp);
 }
 
@@ -361,18 +365,6 @@ void load_entire_network(network net, const char *prefix) {
     }
 
     fread(&net, sizeof(network), 1, fp);
-
-    for (int i = 0; i < net.n; ++i) {
-        layer l = net.layers[i];
-        fread(l.biases, sizeof(float), l.n, fp);
-        fread(l.weights, sizeof(float), l.nweights, fp);
-        if (l.batch_normalize) {
-            fread(l.scales, sizeof(float), l.n, fp);
-            fread(l.rolling_mean, sizeof(float), l.n, fp);
-            fread(l.rolling_variance, sizeof(float), l.n, fp);
-        }
-    }
-
     fclose(fp);
 }
 
@@ -402,7 +394,6 @@ void forward_network(network net, network_state state)
         }
     }
 }
-
 
 void update_network(network net)
 {

@@ -350,8 +350,8 @@ void combine_compressed_inputs(const char *output_filename, const char *input_fi
     free(combined_data);
 }
 
-int get_size_per_file(network net) {
-    layer last_layer = net.layers[net.n - 1];
+int get_size_per_file(network net, int split_number) {
+    layer last_layer = net.layers[net.n - split_number];
     return last_layer.outputs * last_layer.batch;
 }
 
@@ -370,12 +370,12 @@ void forward_network(network net, network_state state) {
         
         state.input = l.output;
         
-        if (i == net.n - 1) {
+        if (i == net.n - net.split_number) {
         	printf("============================================\n");
 		char filename_save[50];
 		snprintf(filename_save, sizeof(filename_save), "last_layer_input_%d.txt", net.data_number);
 		save_layer_input_to_file(state.input, l.outputs * l.batch, filename_save);
-		printf("1. Saved original input for layer %d at %s\n", i, filename_save);
+		printf("1. [-%d] Saved original input for layer %d at %s\n", net.split_number, i, filename_save);
 		
 		printf("============================================\n");
 		float *custom_input = load_layer_input_from_file(filename_save, l.outputs * l.batch);
@@ -384,11 +384,11 @@ void forward_network(network net, network_state state) {
 			return;
 		}
 
-		printf("2. Loaded custom input for layer %d at %s\n", i, filename_save);
+		printf("2. [-%d] Loaded custom input for layer %d at %s\n", net.split_number, i, filename_save);
 		printf("============================================\n");
 		memcpy(l.output, custom_input, l.outputs * l.batch * sizeof(float));
 		state.input = custom_input;
-		printf("3. Replaced last layer input at layer %d at %s\n", i, filename_save);
+		printf("3. [-%d] Replaced last layer input at layer %d at %s\n", net.split_number, i, filename_save);
 		printf("============================================\n");
 		
 		free(custom_input);

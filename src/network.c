@@ -372,7 +372,8 @@ void forward_network(network net, network_state state) {
         
         if (i == net.n - 1) {
         	printf("============================================\n");
-		const char *filename_save = "last_layer_input_5.txt";
+		char filename_save[50];
+		snprintf(filename_save, sizeof(filename_save), "last_layer_input_%d.txt", net.data_number);
 		save_layer_input_to_file(state.input, l.outputs * l.batch, filename_save);
 		printf("1. Saved original input for layer %d at %s\n", i, filename_save);
 		

@@ -32,6 +32,7 @@ vcpkg_installed/
 .fuse*
 *.weights
 *.zip
+*.bin
 build/*.cmake
 build/*.ninja
 build/*.txt

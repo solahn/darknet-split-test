@@ -358,44 +358,101 @@ int get_size_per_file(network net, int split_number) {
 
 void forward_network(network net, network_state state) {
     state.workspace = net.workspace;
-
     int i;
-    for(i = 0; i < net.n; ++i){
-        state.index = i;
-        layer l = net.layers[i];
-        if(l.delta && state.train && l.train){
-            scal_cpu(l.outputs * l.batch, 0, l.delta, 1);
-        }
-        l.forward(l, state);
-        
-        state.input = l.output;
-        
-        if (i == net.n - net.split_number) {
-        	printf("============================================\n");
-		char filename_save[50];
-		snprintf(filename_save, sizeof(filename_save), "last_layer_input_%d.txt", net.data_number);
-		save_layer_input_to_file(state.input, l.outputs * l.batch, filename_save);
-		printf("1. [-%d] Saved original input for layer %d at %s\n", net.split_number, i, filename_save);
-		
-		printf("============================================\n");
-		float *custom_input = load_layer_input_from_file(filename_save, l.outputs * l.batch);
-		if (!custom_input) {
-			fprintf(stderr, "Error loading custom input from file: %s\n", filename_save);
-			return;
+    
+    if (net.data_number != 0){
+	    for(i = 0; i < net.n; ++i){
+		state.index = i;
+		layer l = net.layers[i];
+		if(l.delta && state.train && l.train){
+		    scal_cpu(l.outputs * l.batch, 0, l.delta, 1);
 		}
-
-		printf("2. [-%d] Loaded custom input for layer %d at %s\n", net.split_number, i, filename_save);
-		printf("============================================\n");
-		memcpy(l.output, custom_input, l.outputs * l.batch * sizeof(float));
-		state.input = custom_input;
-		printf("3. [-%d] Replaced last layer input at layer %d at %s\n", net.split_number, i, filename_save);
-		printf("============================================\n");
+		l.forward(l, state);
 		
-		free(custom_input);
-        } 
-        else {
 		state.input = l.output;
-        }
+		
+		if (i == net.n - net.split_number) {
+			printf("============================================\n");
+			char filename_save[50];
+			snprintf(filename_save, sizeof(filename_save), "last_layer_input_%d.txt", net.data_number);
+			save_layer_input_to_file(state.input, l.outputs * l.batch, filename_save);
+			printf("1. [-%d] Saved original input for layer %d at %s\n", net.split_number, i, filename_save);
+			
+			printf("============================================\n");
+			float *custom_input = load_layer_input_from_file(filename_save, l.outputs * l.batch);
+			if (!custom_input) {
+				fprintf(stderr, "Error loading custom input from file: %s\n", filename_save);
+				return;
+			}
+
+			printf("2. [-%d] Loaded custom input for layer %d at %s\n", net.split_number, i, filename_save);
+			printf("============================================\n");
+			memcpy(l.output, custom_input, l.outputs * l.batch * sizeof(float));
+			state.input = custom_input;
+			printf("3. [-%d] Replaced last layer input at layer %d at %s\n", net.split_number, i, filename_save);
+			printf("============================================\n");
+			
+			free(custom_input);
+		} 
+		else {
+			state.input = l.output;
+		}
+	    }
+    }
+    else {
+	    printf("============================================\n");
+	    const char *input_filenames[] = {
+		"./last_layer_input_/last_layer_input_1_.txt",
+		"./last_layer_input_/last_layer_input_2_.txt",
+		"./last_layer_input_/last_layer_input_3_.txt",
+		"./last_layer_input_/last_layer_input_4_.txt",
+		"./last_layer_input_/last_layer_input_5_.txt",
+		"./last_layer_input_/last_layer_input_6_.txt",
+		"./last_layer_input_/last_layer_input_7_.txt",
+		"./last_layer_input_/last_layer_input_8_.txt",
+		"./last_layer_input_/last_layer_input_9_.txt"
+	    };
+	    int size_per_file = get_size_per_file(net, net.split_number);
+	    combine_compressed_inputs("combined_last_layer_input.bin", input_filenames, size_per_file);
+	    printf("1. Combine 9 inputs for %d layer\n", net.n - net.split_number);
+	    printf("============================================\n");
+	    
+	    const char *filename = "combined_last_layer_input.bin";
+
+	    // 마지막 레이어 input 로드
+	    layer last_layer = net.layers[net.n - net.split_number];
+	    float *custom_input = load_layer_input_from_file(filename, last_layer.outputs * last_layer.batch);
+	    if (!custom_input) {
+		fprintf(stderr, "Error loading custom input from file: %s\n", filename);
+		return;
+	    }
+
+	    printf("2. Loaded custom input for %d layer\n", net.n - net.split_number);
+	    printf("============================================\n");
+	    for(i = 0; i < net.n; ++i){
+		state.index = i;
+		layer l = net.layers[i];
+		if(l.delta && state.train && l.train){
+		    scal_cpu(l.outputs * l.batch, 0, l.delta, 1);
+		}
+		l.forward(l, state);
+
+		// 마지막 레이어의 input을 대체
+		if (i == net.n - net.split_number) {
+		    // 기존 네트워크의 마지막 forward pass 건너뜀
+		    save_layer_input_to_file(state.input, l.outputs * l.batch, "before_memcpy_input.bin");
+		    memcpy(l.output, custom_input, last_layer.outputs * last_layer.batch * sizeof(float));
+		    state.input = custom_input;
+		    printf("3. Replaced last layer input at %d layer\n", net.n - net.split_number);
+		    save_layer_input_to_file(state.input, l.outputs * l.batch, "after_memcpy_input.bin");
+	    	    printf("============================================\n");
+		} else {
+		    state.input = l.output;
+		}
+	    }
+
+	    free(custom_input);
+    
     }
 
 }

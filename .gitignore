@@ -33,6 +33,7 @@ vcpkg_installed/
 *.weights
 *.zip
 *.bin
+*.txt
 build/*.cmake
 build/*.ninja
 build/*.txt

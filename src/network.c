@@ -372,26 +372,70 @@ void forward_network(network net, network_state state)
 {
     state.workspace = net.workspace;
     int test = 1;
-    const char *prefix = "network_state";
-
+    int target_layer_id = 160;
+    
     if (test == 0) {
-        for (int i = 0; i < 160; ++i) {
-            state.index = i;
-            layer l = net.layers[i];
-            l.forward(l, state);
-            state.input = l.output;
-        }
-        save_network_state(state, prefix);
-        save_entire_network(net, prefix);
-    } else {
-        load_network_state(state, prefix);
-        load_entire_network(net, prefix);
-        for (int i = 160; i < net.n; ++i) {
-            state.index = i;
-            layer l = net.layers[i];
-            l.forward(l, state);
-            state.input = l.output;
-        }
+	    for(int i = 0; i < net.n; ++i){
+	        printf("%d\n", i);
+		state.index = i;
+		layer l = net.layers[i];
+		l.forward(l, state);
+		state.input = l.output;
+	    }
+	    
+	    for(int i = 0; i <= target_layer_id; ++i){
+	        layer l = net.layers[i];
+		// if(i == target_layer_id) { // 160번째 레이어 (index는 0부터 시작하므로 159)
+		    char filename_save[50];
+		    snprintf(filename_save, sizeof(filename_save), "layer_output_%d.txt", i);
+		    FILE *fp = fopen(filename_save, "w");
+		    if(fp) {
+			for(int j = 0; j < l.outputs * l.batch; ++j) {
+			    fprintf(fp, "%f\n", l.output[j]);
+			}
+			fclose(fp);
+		    } else {
+			printf("Failed to open file to write layer output.\n");
+		    }
+		    //break; // 160번째 레이어까지 수행한 후 중단
+		// }
+	    }
+    }
+    else {
+	    /*for(int i = 0; i < target_layer_id; ++i){ // 161번째 레이어부터 시작
+		printf("%d\n", i);
+		state.index = i;
+		layer l = net.layers[i];
+		l.forward(l, state);
+		state.input = l.output;
+	    }*/
+	    for(int i = 0; i <= target_layer_id; ++i){
+	        if(i == 150 || i == target_layer_id) {
+		    layer l = net.layers[i];
+		    char filename_save[50];
+		    snprintf(filename_save, sizeof(filename_save), "layer_output_%d.txt", i);
+		    FILE *fp = fopen(filename_save, "r");
+		    if(fp) {
+			// layer l = net.layers[target_layer_id]; // 160번째 레이어
+			for(int j = 0; j < l.outputs * l.batch; ++j) {
+			    fscanf(fp, "%f", &l.output[j]);
+			}
+			fclose(fp);
+			state.input = l.output;
+		    } else {
+			printf("Failed to open file to read layer output.\n");
+			return;
+		    }
+		}
+	    }
+
+	    for(int i = target_layer_id + 1; i < net.n; ++i){ // 161번째 레이어부터 시작
+		printf("%d\n", i);
+		state.index = i;
+		layer l = net.layers[i];
+		l.forward(l, state);
+		state.input = l.output;
+	    }
     }
 }
 

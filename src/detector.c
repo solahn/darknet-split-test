@@ -18,53 +18,6 @@ typedef __compar_fn_t comparison_fn_t;
 #endif
 
 #include "http_stream.h"
-#include <ctype.h>
-
-int split_number;
-
-void extract_value(const char *file_name, char *result) {
-    const char *start, *end;
-
-    // ".jpg"의 위치를 찾음
-    end = strstr(file_name, ".jpg");
-    if (end == NULL) {
-        printf(".jpg not found in the file name.\n");
-        result[0] = '\0';
-        return;
-    }
-
-    // "_"의 위치를 찾음
-    start = end;
-    while (start > file_name && *start != '_') {
-        start--;
-    }
-
-    if (start == file_name) {
-        printf("Underscore not found before .jpg in the file name.\n");
-        result[0] = '\0';
-        return;
-    }
-
-    // start를 한 칸 이동하여 '_' 다음 문자부터 복사
-    start++;
-
-    // 추출할 부분의 길이를 계산하고 복사
-    size_t length = end - start;
-    strncpy(result, start, length);
-    result[length] = '\0'; // 문자열 끝에 null 문자 추가
-}
-
-int is_integer(const char *str) {
-    // 빈 문자열 처리
-    if (*str == '\0') return 0;
-
-    // 각 문자가 숫자인지 확인
-    while (*str) {
-        if (!isdigit(*str)) return 0;
-        str++;
-    }
-    return 1;
-}
 
 static int coco_ids[] = { 1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,31,32,33,34,35,36,37,38,39,40,41,42,43,44,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,67,70,72,73,74,75,76,77,78,79,80,81,82,84,85,86,87,88,89,90 };
 
@@ -1701,29 +1654,11 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
     }
     int j;
     float nms = .45;    // 0.4F
-    printf("============================================\n");
-    printf("filename: %s\n", filename);
     while (1) {
-        net.split_number = split_number;
-        printf("How many split network? --> net.split_number = %d\n", net.split_number);
         if (filename) {
             strncpy(input, filename, 256);
             if (strlen(input) > 0)
                 if (input[strlen(input) - 1] == 0x0d) input[strlen(input) - 1] = 0;
-	    char result[100];
-	    extract_value(filename, result);
-	    if (result[0] != '\0') {
-		printf("Extracted value: %s\n", result);
-		if (is_integer(result)) {
-		    net.data_number = atoi(result);
-		    printf("The extracted value is an integer --> data.number = %d\n", net.data_number);
-		} else {
-	      	    net.data_number = 0;
-		    printf("The extracted value is not an integer --> data.number = %d\n", net.data_number);
-		}
-	    }
-	    printf("============================================\n");
-                
         }
         else {
             printf("Enter Image Path: ");
@@ -2016,7 +1951,6 @@ void run_detector(int argc, char **argv)
     int benchmark_layers = find_arg(argc, argv, "-benchmark_layers");
     //if (benchmark_layers) benchmark = 1;
     if (benchmark) dont_show = 1;
-    split_number = find_int_arg(argc, argv, "-split_number", 0);
     int show = find_arg(argc, argv, "-show");
     int letter_box = find_arg(argc, argv, "-letter_box");
     int calc_map = find_arg(argc, argv, "-map");

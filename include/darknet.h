@@ -702,8 +702,6 @@ typedef enum {
 
 // network.h
 typedef struct network {
-    int split_number;
-    int data_number;
     int n;
     int batch;
     uint64_t *seen;

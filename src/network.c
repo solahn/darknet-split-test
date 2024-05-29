@@ -269,7 +269,7 @@ network make_network(int n)
 void forward_network(network net, network_state state)
 {
     state.workspace = net.workspace;
-    int test = 0;
+    int test = 1;
     int target_layer_id = 160;
     
     if (test == 0) {

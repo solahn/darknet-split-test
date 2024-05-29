@@ -269,7 +269,7 @@ network make_network(int n)
 void forward_network(network net, network_state state)
 {
     state.workspace = net.workspace;
-    int test = 1;
+    int test = 0;
     int target_layer_id = 160;
     
     if (test == 0) {
@@ -286,9 +286,9 @@ void forward_network(network net, network_state state)
             if(i == 139 || i == 150 || i == target_layer_id) { // 139, 150, 161 --> YOLO LAYER
 	            printf("%d --> save!\n", i);
                 char filename_save[50];
-                if (net.data_number != 0) snprintf(filename_save, sizeof(filename_save), "./layer_output/node%d/layer_output_%d.txt", net.data_number, i);
-                else snprintf(filename_save, sizeof(filename_save), "./layer_output/layer_output_%d.txt", i);
-                FILE *fp = fopen(filename_save, "w");
+                if (net.data_number != 0) snprintf(filename_save, sizeof(filename_save), "./layer_output/node%d/layer_output_%d.bin", net.data_number, i);
+                else snprintf(filename_save, sizeof(filename_save), "./layer_output/layer_output_%d.bin", i);
+                FILE *fp = fopen(filename_save, "wb");
                 if(fp) {
                     for(int j = 0; j < l.outputs * l.batch; ++j) {
                         fprintf(fp, "%f\n", l.output[j]);
@@ -314,9 +314,9 @@ void forward_network(network net, network_state state)
                 printf("%d --> load!\n", i);
                 layer l = net.layers[i];
                 char filename_save[50];
-                if (net.data_number != 0) snprintf(filename_save, sizeof(filename_save), "./layer_output/node%d/layer_output_%d.txt", net.data_number, i);
-                else snprintf(filename_save, sizeof(filename_save), "./layer_output/layer_output_%d.txt", i);
-                FILE *fp = fopen(filename_save, "r");
+                if (net.data_number != 0) snprintf(filename_save, sizeof(filename_save), "./layer_output/node%d/layer_output_%d.bin", net.data_number, i);
+                else snprintf(filename_save, sizeof(filename_save), "./layer_output/layer_output_%d.bin", i);
+                FILE *fp = fopen(filename_save, "rb");
                 if(fp) {
                     for(int j = 0; j < l.outputs * l.batch; ++j) {
                         fscanf(fp, "%f", &l.output[j]);

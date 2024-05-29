@@ -266,177 +266,85 @@ network make_network(int n)
     return net;
 }
 
-// Helper function to calculate the maximum workspace size
-size_t get_max_workspace_size(network net) {
-    size_t max_workspace_size = 0;
-    for (int i = 0; i < net.n; ++i) {
-        layer l = net.layers[i];
-        if (l.workspace_size > max_workspace_size) {
-            max_workspace_size = l.workspace_size;
+void save_layer_input_to_file(float *data, int size, const char *filename) {
+    FILE *file = fopen(filename, "w");
+    if (!file) {
+        fprintf(stderr, "Error opening file for writing: %s\n", filename);
+        return;
+    }
+
+    for (int i = 0; i < size; ++i) {
+        fprintf(file, "%f\n", data[i]);
+    }
+
+    fclose(file);
+}
+
+float* load_layer_input_from_file(const char *filename, int size) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        fprintf(stderr, "Error opening file for reading: %s\n", filename);
+        return NULL;
+    }
+
+    float *data = (float*)malloc(size * sizeof(float));
+    if (!data) {
+        fprintf(stderr, "Error allocating memory\n");
+        fclose(file);
+        return NULL;
+    }
+
+    for (int i = 0; i < size; ++i) {
+        if (fscanf(file, "%f", &data[i]) != 1) {
+            fprintf(stderr, "Error reading data from file: %s\n", filename);
+            free(data);
+            fclose(file);
+            return NULL;
         }
     }
-    return max_workspace_size;
+
+    fclose(file);
+    return data;
 }
 
-// Function to save all variables of network_state
-void save_network_state(network_state state, const char *prefix) {
-    char filename[256];
-    FILE *fp;
-
-    sprintf(filename, "%s_network_state.bin", prefix);
-    fp = fopen(filename, "wb");
-    if (!fp) {
-        perror("Failed to open file for writing");
-        exit(EXIT_FAILURE);
-    }
-
-    fwrite(&state.index, sizeof(int), 1, fp);
-    if (state.input) {
-        fwrite(state.input, sizeof(float), state.net.inputs * state.net.batch, fp);
-    }
-    if (state.truth) {
-        fwrite(state.truth, sizeof(float), state.net.truths * state.net.batch, fp);
-    }
-    if (state.delta) {
-        fwrite(state.delta, sizeof(float), state.net.outputs * state.net.batch, fp);
-    }
-    size_t workspace_size = get_max_workspace_size(state.net);
-    if (state.workspace) {
-        fwrite(state.workspace, 1, workspace_size, fp);
-    }
-    fclose(fp);
-}
-
-// Function to save all variables of network
-void save_entire_network(network net, const char *prefix) {
-    char filename[256];
-    FILE *fp;
-
-    sprintf(filename, "%s_network.bin", prefix);
-    fp = fopen(filename, "wb");
-    if (!fp) {
-        perror("Failed to open file for writing");
-        exit(EXIT_FAILURE);
-    }
-
-    fwrite(&net, sizeof(network), 1, fp);
-    fclose(fp);
-}
-
-// Function to load all variables of network_state
-void load_network_state(network_state state, const char *prefix) {
-    char filename[256];
-    FILE *fp;
-
-    sprintf(filename, "%s_network_state.bin", prefix);
-    fp = fopen(filename, "rb");
-    if (!fp) {
-        perror("Failed to open file for reading");
-        exit(EXIT_FAILURE);
-    }
-
-    fread(&state.index, sizeof(int), 1, fp);
-    if (state.input) {
-        fread(state.input, sizeof(float), state.net.inputs * state.net.batch, fp);
-    }
-    if (state.truth) {
-        fread(state.truth, sizeof(float), state.net.truths * state.net.batch, fp);
-    }
-    if (state.delta) {
-        fread(state.delta, sizeof(float), state.net.outputs * state.net.batch, fp);
-    }
-    size_t workspace_size = get_max_workspace_size(state.net);
-    if (state.workspace) {
-        fread(state.workspace, 1, workspace_size, fp);
-    }
-    fclose(fp);
-}
-
-// Function to load all variables of network
-void load_entire_network(network net, const char *prefix) {
-    char filename[256];
-    FILE *fp;
-
-    sprintf(filename, "%s_network.bin", prefix);
-    fp = fopen(filename, "rb");
-    if (!fp) {
-        perror("Failed to open file for reading");
-        exit(EXIT_FAILURE);
-    }
-
-    fread(&net, sizeof(network), 1, fp);
-    fclose(fp);
-}
-
-void forward_network(network net, network_state state)
-{
+void forward_network(network net, network_state state) {
     state.workspace = net.workspace;
-    int test = 1;
-    int target_layer_id = 160;
     
-    if (test == 0) {
-	    for(int i = 0; i < net.n; ++i){
-	        printf("%d\n", i);
-		state.index = i;
-		layer l = net.layers[i];
-		l.forward(l, state);
-		state.input = l.output;
-	    }
-	    
-	    for(int i = 0; i <= target_layer_id; ++i){
-	        layer l = net.layers[i];
-		// if(i == target_layer_id) { // 160번째 레이어 (index는 0부터 시작하므로 159)
-		    char filename_save[50];
-		    snprintf(filename_save, sizeof(filename_save), "layer_output_%d.txt", i);
-		    FILE *fp = fopen(filename_save, "w");
-		    if(fp) {
-			for(int j = 0; j < l.outputs * l.batch; ++j) {
-			    fprintf(fp, "%f\n", l.output[j]);
-			}
-			fclose(fp);
-		    } else {
-			printf("Failed to open file to write layer output.\n");
-		    }
-		    //break; // 160번째 레이어까지 수행한 후 중단
-		// }
-	    }
-    }
-    else {
-	    /*for(int i = 0; i < target_layer_id; ++i){ // 161번째 레이어부터 시작
-		printf("%d\n", i);
-		state.index = i;
-		layer l = net.layers[i];
-		l.forward(l, state);
-		state.input = l.output;
-	    }*/
-	    for(int i = 0; i <= target_layer_id; ++i){
-	        if(i == 150 || i == target_layer_id) {
-		    layer l = net.layers[i];
-		    char filename_save[50];
-		    snprintf(filename_save, sizeof(filename_save), "layer_output_%d.txt", i);
-		    FILE *fp = fopen(filename_save, "r");
-		    if(fp) {
-			// layer l = net.layers[target_layer_id]; // 160번째 레이어
-			for(int j = 0; j < l.outputs * l.batch; ++j) {
-			    fscanf(fp, "%f", &l.output[j]);
-			}
-			fclose(fp);
-			state.input = l.output;
-		    } else {
-			printf("Failed to open file to read layer output.\n");
-			return;
-		    }
-		}
-	    }
+    // const char *filename_load = "last_layer_input_.txt";
+    // layer last_layer = net.layers[net.n - 2];
+    // float *custom_input = load_layer_input_from_file(filename_load, last_layer.outputs * last_layer.batch);
+    // if (!custom_input) {
+    //     fprintf(stderr, "Error loading custom input from file: %s\n", filename_load);
+    //     return;
+    // }
+    // printf("Loaded custom input for last layer\n");
 
-	    for(int i = target_layer_id + 1; i < net.n; ++i){ // 161번째 레이어부터 시작
-		printf("%d\n", i);
-		state.index = i;
-		layer l = net.layers[i];
-		l.forward(l, state);
-		state.input = l.output;
-	    }
+    int i;
+    for(i = 0; i < net.n; ++i){
+        state.index = i;
+        layer l = net.layers[i];
+        if(l.delta && state.train && l.train){
+            scal_cpu(l.outputs * l.batch, 0, l.delta, 1);
+        }
+        l.forward(l, state);
+        
+        state.input = l.output;
+        
+        if (i == net.n - 2) {
+                const char *filename_save = "last_layer_input_7.txt";
+                save_layer_input_to_file(state.input, l.outputs * l.batch, filename_save);
+        }
+        
+        // if (i == net.n - 2) {
+        //     memcpy(l.output, custom_input, last_layer.outputs * last_layer.batch * sizeof(float));
+        //     state.input = custom_input;
+        //     printf("Replaced last layer input at layer %d at %s\n", i, filename_load);
+        // } else {
+        //     state.input = l.output;
+        // }
     }
+
+    // free(custom_input);
 }
 
 void update_network(network net)

@@ -266,6 +266,25 @@ network make_network(int n)
     return net;
 }
 
+float* load_layer_input_from_file(const char *filename, int size) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        fprintf(stderr, "Error opening file for reading: %s\n", filename);
+        return NULL;
+    }
+
+    float *data = (float*)malloc(size * sizeof(float));
+    if (!data) {
+        fprintf(stderr, "Error allocating memory\n");
+        fclose(file);
+        return NULL;
+    }
+
+    fread(data, sizeof(float), size, file);
+    fclose(file);
+    return data;
+}
+
 void combine_compressed_inputs(const char *output_filename, const char *input_filenames[], int size_per_file) {
     int compressed_size = size_per_file / 9;
     float *combined_data = (float*)malloc(compressed_size * 9 * sizeof(float));
@@ -311,48 +330,57 @@ void forward_network(network net, network_state state)
     int target_layer_id = 160;
     
     const char *input_filenames_139_layer[] = {
-        "./layer_output/node1/layer_output_139.txt",
-        "./layer_output/node2/layer_output_139.txt",
-        "./layer_output/node3/layer_output_139.txt",
-        "./layer_output/node4/layer_output_139.txt",
-        "./layer_output/node5/layer_output_139.txt",
-        "./layer_output/node6/layer_output_139.txt",
-        "./layer_output/node7/layer_output_139.txt",
-        "./layer_output/node8/layer_output_139.txt",
-        "./layer_output/node9/layer_output_139.txt",
+        "./layer_output/node1/layer_output_139.bin",
+        "./layer_output/node2/layer_output_139.bin",
+        "./layer_output/node3/layer_output_139.bin",
+        "./layer_output/node4/layer_output_139.bin",
+        "./layer_output/node5/layer_output_139.bin",
+        "./layer_output/node6/layer_output_139.bin",
+        "./layer_output/node7/layer_output_139.bin",
+        "./layer_output/node8/layer_output_139.bin",
+        "./layer_output/node9/layer_output_139.bin",
     };
 
     const char *input_filenames_150_layer[] = {
-        "./layer_output/node1/layer_output_150.txt",
-        "./layer_output/node2/layer_output_150.txt",
-        "./layer_output/node3/layer_output_150.txt",
-        "./layer_output/node4/layer_output_150.txt",
-        "./layer_output/node5/layer_output_150.txt",
-        "./layer_output/node6/layer_output_150.txt",
-        "./layer_output/node7/layer_output_150.txt",
-        "./layer_output/node8/layer_output_150.txt",
-        "./layer_output/node9/layer_output_150.txt",
+        "./layer_output/node1/layer_output_150.bin",
+        "./layer_output/node2/layer_output_150.bin",
+        "./layer_output/node3/layer_output_150.bin",
+        "./layer_output/node4/layer_output_150.bin",
+        "./layer_output/node5/layer_output_150.bin",
+        "./layer_output/node6/layer_output_150.bin",
+        "./layer_output/node7/layer_output_150.bin",
+        "./layer_output/node8/layer_output_150.bin",
+        "./layer_output/node9/layer_output_150.bin",
     };
 
     const char *input_filenames_160_layer[] = {
-        "./layer_output/node1/layer_output_160.txt",
-        "./layer_output/node2/layer_output_160.txt",
-        "./layer_output/node3/layer_output_160.txt",
-        "./layer_output/node4/layer_output_160.txt",
-        "./layer_output/node5/layer_output_160.txt",
-        "./layer_output/node6/layer_output_160.txt",
-        "./layer_output/node7/layer_output_160.txt",
-        "./layer_output/node8/layer_output_160.txt",
-        "./layer_output/node9/layer_output_160.txt",
+        "./layer_output/node1/layer_output_160.bin",
+        "./layer_output/node2/layer_output_160.bin",
+        "./layer_output/node3/layer_output_160.bin",
+        "./layer_output/node4/layer_output_160.bin",
+        "./layer_output/node5/layer_output_160.bin",
+        "./layer_output/node6/layer_output_160.bin",
+        "./layer_output/node7/layer_output_160.bin",
+        "./layer_output/node8/layer_output_160.bin",
+        "./layer_output/node9/layer_output_160.bin",
     };
 
     // 160 layer
     int size_per_file = get_size_per_file(net, 160);
-    combine_compressed_inputs("combined_last_layer_input.bin", input_filenames, size_per_file);
+    const char *filename = "combined_target_layer_input.bin";
+    combine_compressed_inputs(filename, input_filenames, size_per_file);
+
+    // 마지막 레이어 input 로드
+    layer target_layer = net.layers[160];
+    float *custom_input = load_layer_input_from_file(filename, target_layer.outputs * target_layer.batch);
+    if (!custom_input) {
+        fprintf(stderr, "Error loading custom input from file: %s\n", filename);
+        return;
+    }
+
+    printf("Loaded custom input for last layer\n");
 
 
-
-    
 
     if (test == 0) {
 	    for(int i = 0; i < net.n; ++i){
@@ -368,8 +396,8 @@ void forward_network(network net, network_state state)
             if(i == 139 || i == 150 || i == target_layer_id) { // 139, 150, 161 --> YOLO LAYER
 	            printf("%d --> save!\n", i);
                 char filename_save[50];
-                if (net.data_number != 0) snprintf(filename_save, sizeof(filename_save), "./layer_output/node%d/layer_output_%d.txt", net.data_number, i);
-                else snprintf(filename_save, sizeof(filename_save), "./layer_output/layer_output_%d.txt", i);
+                if (net.data_number != 0) snprintf(filename_save, sizeof(filename_save), "./layer_output/node%d/layer_output_%d.bin", net.data_number, i);
+                else snprintf(filename_save, sizeof(filename_save), "./layer_output/layer_output_%d.bin", i);
                 FILE *fp = fopen(filename_save, "w");
                 if(fp) {
                     for(int j = 0; j < l.outputs * l.batch; ++j) {
@@ -396,8 +424,8 @@ void forward_network(network net, network_state state)
                 printf("%d --> load!\n", i);
                 layer l = net.layers[i];
                 char filename_save[50];
-                if (net.data_number != 0) snprintf(filename_save, sizeof(filename_save), "./layer_output/node%d/layer_output_%d.txt", net.data_number, i);
-                else snprintf(filename_save, sizeof(filename_save), "./layer_output/layer_output_%d.txt", i);
+                if (net.data_number != 0) snprintf(filename_save, sizeof(filename_save), "./layer_output/node%d/layer_output_%d.bin", net.data_number, i);
+                else snprintf(filename_save, sizeof(filename_save), "./layer_output/layer_output_%d.bin", i);
                 FILE *fp = fopen(filename_save, "r");
                 if(fp) {
                     for(int j = 0; j < l.outputs * l.batch; ++j) {

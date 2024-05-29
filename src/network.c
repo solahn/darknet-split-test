@@ -266,6 +266,45 @@ network make_network(int n)
     return net;
 }
 
+void combine_compressed_inputs(const char *output_filename, const char *input_filenames[], int size_per_file) {
+    int compressed_size = size_per_file / 9;
+    float *combined_data = (float*)malloc(compressed_size * 9 * sizeof(float));
+    if (!combined_data) {
+        fprintf(stderr, "Error allocating memory for combined data\n");
+        return;
+    }
+
+    for (int i = 0; i < 9; ++i) {
+        float *data = load_layer_input_from_file(input_filenames[i], size_per_file);
+        if (!data) {
+            free(combined_data);
+            return;
+        }
+
+        float *compressed_data = compress_data(data, size_per_file);
+        if (!compressed_data) {
+            free(combined_data);
+            free(data);
+            return;
+        }
+
+        for (int j = 0; j < compressed_size; ++j) {
+            combined_data[i * compressed_size + j] = compressed_data[j];
+        }
+
+        free(data);
+        free(compressed_data);
+    }
+
+    save_layer_input_to_file(combined_data, compressed_size * 9, output_filename);
+    free(combined_data);
+}
+
+int get_size_per_file(network net, int layer_id) {
+    layer target_layer = net.layers[layer_id];
+    return target_layer.outputs * target_layer.batch;
+}
+
 void forward_network(network net, network_state state)
 {
     state.workspace = net.workspace;
@@ -306,6 +345,14 @@ void forward_network(network net, network_state state)
         "./layer_output/node8/layer_output_160.txt",
         "./layer_output/node9/layer_output_160.txt",
     };
+
+    // 160 layer
+    int size_per_file = get_size_per_file(net, 160);
+    combine_compressed_inputs("combined_last_layer_input.bin", input_filenames, size_per_file);
+
+
+
+    
 
     if (test == 0) {
 	    for(int i = 0; i < net.n; ++i){

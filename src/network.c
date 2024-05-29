@@ -358,30 +358,6 @@ void forward_network(network net, network_state state)
 {
     state.workspace = net.workspace;
     int target_layer_id = 160;
-    
-    const char *input_filenames_139_layer[] = {
-        "./layer_output/node1/layer_output_139.bin",
-        "./layer_output/node2/layer_output_139.bin",
-        "./layer_output/node3/layer_output_139.bin",
-        "./layer_output/node4/layer_output_139.bin",
-        "./layer_output/node5/layer_output_139.bin",
-        "./layer_output/node6/layer_output_139.bin",
-        "./layer_output/node7/layer_output_139.bin",
-        "./layer_output/node8/layer_output_139.bin",
-        "./layer_output/node9/layer_output_139.bin",
-    };
-
-    const char *input_filenames_150_layer[] = {
-        "./layer_output/node1/layer_output_150.bin",
-        "./layer_output/node2/layer_output_150.bin",
-        "./layer_output/node3/layer_output_150.bin",
-        "./layer_output/node4/layer_output_150.bin",
-        "./layer_output/node5/layer_output_150.bin",
-        "./layer_output/node6/layer_output_150.bin",
-        "./layer_output/node7/layer_output_150.bin",
-        "./layer_output/node8/layer_output_150.bin",
-        "./layer_output/node9/layer_output_150.bin",
-    };
 
     const char *input_filenames_160_layer[] = {
         "./layer_output/node1/layer_output_160.bin",
@@ -418,11 +394,13 @@ void forward_network(network net, network_state state)
         l.forward(l, state);
 
         // 마지막 레이어의 input을 대체
-        if (i == net.n - 1) {
+        if (i == 160) {
             // 기존 네트워크의 마지막 forward pass 건너뜀
+            save_layer_input_to_file(state.input, l.outputs * l.batch, "before_memcpy_input.bin");
             memcpy(l.output, custom_input, target_layer.outputs * target_layer.batch * sizeof(float));
             state.input = custom_input;
             printf("Replaced last layer input at layer %d\n", i);
+            save_layer_input_to_file(state.input, l.outputs * l.batch, "after_memcpy_input.bin");
         } else {
             state.input = l.output;
         }

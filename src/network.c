@@ -285,6 +285,36 @@ float* load_layer_input_from_file(const char *filename, int size) {
     return data;
 }
 
+void save_layer_input_to_file(float *data, int size, const char *filename) {
+    FILE *file = fopen(filename, "wb");
+    if (!file) {
+        fprintf(stderr, "Error opening file for writing: %s\n", filename);
+        return;
+    }
+
+    fwrite(data, sizeof(float), size, file);
+    fclose(file);
+}
+
+float* compress_data(float *data, int original_size) {
+    int compressed_size = original_size / 9;
+    float *compressed_data = (float*)malloc(compressed_size * sizeof(float));
+    if (!compressed_data) {
+        fprintf(stderr, "Error allocating memory for compressed data\n");
+        return NULL;
+    }
+
+    for (int i = 0; i < compressed_size; ++i) {
+        compressed_data[i] = 0;
+        for (int j = 0; j < 9; ++j) {
+            compressed_data[i] += data[i * 9 + j];
+        }
+        compressed_data[i] /= 9;
+    }
+
+    return compressed_data;
+}
+
 void combine_compressed_inputs(const char *output_filename, const char *input_filenames[], int size_per_file) {
     int compressed_size = size_per_file / 9;
     float *combined_data = (float*)malloc(compressed_size * 9 * sizeof(float));
@@ -367,87 +397,105 @@ void forward_network(network net, network_state state)
 
     // 160 layer
     int size_per_file = get_size_per_file(net, 160);
-    const char *filename = "combined_target_layer_input.bin";
-    combine_compressed_inputs(filename, input_filenames, size_per_file);
+    const char *filename = "combined_160_layer_input.bin";
+    combine_compressed_inputs(filename, input_filenames_160_layer, size_per_file);
 
-    // 마지막 레이어 input 로드
     layer target_layer = net.layers[160];
     float *custom_input = load_layer_input_from_file(filename, target_layer.outputs * target_layer.batch);
     if (!custom_input) {
         fprintf(stderr, "Error loading custom input from file: %s\n", filename);
         return;
     }
-
     printf("Loaded custom input for last layer\n");
 
+    int i;
+    for(i = 0; i < net.n; ++i){
+        state.index = i;
+        layer l = net.layers[i];
+        if(l.delta && state.train && l.train){
+            scal_cpu(l.outputs * l.batch, 0, l.delta, 1);
+        }
+        l.forward(l, state);
 
-
-    if (test == 0) {
-	    for(int i = 0; i < net.n; ++i){
-	        printf("%d\n", i);
-            state.index = i;
-            layer l = net.layers[i];
-            l.forward(l, state);
+        // 마지막 레이어의 input을 대체
+        if (i == net.n - 1) {
+            // 기존 네트워크의 마지막 forward pass 건너뜀
+            memcpy(l.output, custom_input, target_layer.outputs * target_layer.batch * sizeof(float));
+            state.input = custom_input;
+            printf("Replaced last layer input at layer %d\n", i);
+        } else {
             state.input = l.output;
-	    }
+        }
+    }
+
+    free(custom_input);
+
+    // if (test == 0) {
+	//     for(int i = 0; i < net.n; ++i){
+	//         printf("%d\n", i);
+    //         state.index = i;
+    //         layer l = net.layers[i];
+    //         l.forward(l, state);
+    //         state.input = l.output;
+	//     }
 	    
-	    for(int i = 0; i <= target_layer_id; ++i){
-	        layer l = net.layers[i];
-            if(i == 139 || i == 150 || i == target_layer_id) { // 139, 150, 161 --> YOLO LAYER
-	            printf("%d --> save!\n", i);
-                char filename_save[50];
-                if (net.data_number != 0) snprintf(filename_save, sizeof(filename_save), "./layer_output/node%d/layer_output_%d.bin", net.data_number, i);
-                else snprintf(filename_save, sizeof(filename_save), "./layer_output/layer_output_%d.bin", i);
-                FILE *fp = fopen(filename_save, "w");
-                if(fp) {
-                    for(int j = 0; j < l.outputs * l.batch; ++j) {
-                        fprintf(fp, "%f\n", l.output[j]);
-                    }
-                    fclose(fp);
-                } else {
-                    printf("Failed to open file to write layer output.\n");
-                }
-                //break; // 160번째 레이어까지 수행한 후 중단
-            }
-	    }
-    }
-    else {
-	    /*for(int i = 0; i < target_layer_id; ++i){ // 처음부터 target_layer_id번째 레이어전까지 진행
-            printf("%d\n", i);
-            state.index = i;
-            layer l = net.layers[i];
-            l.forward(l, state);
-            state.input = l.output;
-	    }*/
-	    for(int i = 0; i <= target_layer_id; ++i){
-	        if(i == 139 || i == 150 || i == target_layer_id) {
-                printf("%d --> load!\n", i);
-                layer l = net.layers[i];
-                char filename_save[50];
-                if (net.data_number != 0) snprintf(filename_save, sizeof(filename_save), "./layer_output/node%d/layer_output_%d.bin", net.data_number, i);
-                else snprintf(filename_save, sizeof(filename_save), "./layer_output/layer_output_%d.bin", i);
-                FILE *fp = fopen(filename_save, "r");
-                if(fp) {
-                    for(int j = 0; j < l.outputs * l.batch; ++j) {
-                        fscanf(fp, "%f", &l.output[j]);
-                    }
-                    fclose(fp);
-                    state.input = l.output;
-                } else {
-                    printf("Failed to open file to read layer output.\n");
-                    return;
-                }
-		    }
-	    }
+	//     for(int i = 0; i <= target_layer_id; ++i){
+	//         layer l = net.layers[i];
+    //         if(i == 139 || i == 150 || i == target_layer_id) { // 139, 150, 161 --> YOLO LAYER
+	//             printf("%d --> save!\n", i);
+    //             char filename_save[50];
+    //             if (net.data_number != 0) snprintf(filename_save, sizeof(filename_save), "./layer_output/node%d/layer_output_%d.bin", net.data_number, i);
+    //             else snprintf(filename_save, sizeof(filename_save), "./layer_output/layer_output_%d.bin", i);
+    //             FILE *fp = fopen(filename_save, "w");
+    //             if(fp) {
+    //                 for(int j = 0; j < l.outputs * l.batch; ++j) {
+    //                     fprintf(fp, "%f\n", l.output[j]);
+    //                 }
+    //                 fclose(fp);
+    //             } else {
+    //                 printf("Failed to open file to write layer output.\n");
+    //             }
+    //             //break; // 160번째 레이어까지 수행한 후 중단
+    //         }
+	//     }
+    // }
+    // else {
+	//     /*for(int i = 0; i < target_layer_id; ++i){ // 처음부터 target_layer_id번째 레이어전까지 진행
+    //         printf("%d\n", i);
+    //         state.index = i;
+    //         layer l = net.layers[i];
+    //         l.forward(l, state);
+    //         state.input = l.output;
+	//     }*/
+	//     for(int i = 0; i <= target_layer_id; ++i){
+	//         if(i == 139 || i == 150 || i == target_layer_id) {
+    //             printf("%d --> load!\n", i);
+    //             layer l = net.layers[i];
+    //             char filename_save[50];
+    //             if (net.data_number != 0) snprintf(filename_save, sizeof(filename_save), "./layer_output/node%d/layer_output_%d.bin", net.data_number, i);
+    //             else snprintf(filename_save, sizeof(filename_save), "./layer_output/layer_output_%d.bin", i);
+    //             FILE *fp = fopen(filename_save, "r");
+    //             if(fp) {
+    //                 for(int j = 0; j < l.outputs * l.batch; ++j) {
+    //                     fscanf(fp, "%f", &l.output[j]);
+    //                 }
+    //                 fclose(fp);
+    //                 state.input = l.output;
+    //             } else {
+    //                 printf("Failed to open file to read layer output.\n");
+    //                 return;
+    //             }
+	// 	    }
+	//     }
 
-	    for(int i = target_layer_id + 1; i < net.n; ++i){ // target_layer_id번째 이후 레이어부터 시작
-            printf("%d\n", i);
-            state.index = i;
-            layer l = net.layers[i];
-            l.forward(l, state);
-            state.input = l.output;
-	    }
-    }
+	//     for(int i = target_layer_id + 1; i < net.n; ++i){ // target_layer_id번째 이후 레이어부터 시작
+    //         printf("%d\n", i);
+    //         state.index = i;
+    //         layer l = net.layers[i];
+    //         l.forward(l, state);
+    //         state.input = l.output;
+	//     }
+    // }
 }
 
 void update_network(network net)

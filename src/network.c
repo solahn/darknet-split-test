@@ -269,9 +269,44 @@ network make_network(int n)
 void forward_network(network net, network_state state)
 {
     state.workspace = net.workspace;
-    int test = 0;
     int target_layer_id = 160;
     
+    const char *input_filenames_139_layer[] = {
+        "./layer_output/node1/layer_output_139.txt",
+        "./layer_output/node2/layer_output_139.txt",
+        "./layer_output/node3/layer_output_139.txt",
+        "./layer_output/node4/layer_output_139.txt",
+        "./layer_output/node5/layer_output_139.txt",
+        "./layer_output/node6/layer_output_139.txt",
+        "./layer_output/node7/layer_output_139.txt",
+        "./layer_output/node8/layer_output_139.txt",
+        "./layer_output/node9/layer_output_139.txt",
+    };
+
+    const char *input_filenames_150_layer[] = {
+        "./layer_output/node1/layer_output_150.txt",
+        "./layer_output/node2/layer_output_150.txt",
+        "./layer_output/node3/layer_output_150.txt",
+        "./layer_output/node4/layer_output_150.txt",
+        "./layer_output/node5/layer_output_150.txt",
+        "./layer_output/node6/layer_output_150.txt",
+        "./layer_output/node7/layer_output_150.txt",
+        "./layer_output/node8/layer_output_150.txt",
+        "./layer_output/node9/layer_output_150.txt",
+    };
+
+    const char *input_filenames_160_layer[] = {
+        "./layer_output/node1/layer_output_160.txt",
+        "./layer_output/node2/layer_output_160.txt",
+        "./layer_output/node3/layer_output_160.txt",
+        "./layer_output/node4/layer_output_160.txt",
+        "./layer_output/node5/layer_output_160.txt",
+        "./layer_output/node6/layer_output_160.txt",
+        "./layer_output/node7/layer_output_160.txt",
+        "./layer_output/node8/layer_output_160.txt",
+        "./layer_output/node9/layer_output_160.txt",
+    };
+
     if (test == 0) {
 	    for(int i = 0; i < net.n; ++i){
 	        printf("%d\n", i);

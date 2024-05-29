@@ -267,7 +267,7 @@ network make_network(int n)
 }
 
 void save_layer_input_to_file(float *data, int size, const char *filename) {
-    FILE *file = fopen(filename, "w");
+    FILE *file = fopen(filename, "wb");
     if (!file) {
         fprintf(stderr, "Error opening file for writing: %s\n", filename);
         return;
@@ -281,7 +281,7 @@ void save_layer_input_to_file(float *data, int size, const char *filename) {
 }
 
 float* load_layer_input_from_file(const char *filename, int size) {
-    FILE *file = fopen(filename, "r");
+    FILE *file = fopen(filename, "rb");
     if (!file) {
         fprintf(stderr, "Error opening file for reading: %s\n", filename);
         return NULL;
@@ -309,16 +309,19 @@ float* load_layer_input_from_file(const char *filename, int size) {
 
 void forward_network(network net, network_state state) {
     state.workspace = net.workspace;
+    int test = 0;
     
-    // const char *filename_load = "last_layer_input_.txt";
-    // layer last_layer = net.layers[net.n - 2];
-    // float *custom_input = load_layer_input_from_file(filename_load, last_layer.outputs * last_layer.batch);
-    // if (!custom_input) {
-    //     fprintf(stderr, "Error loading custom input from file: %s\n", filename_load);
-    //     return;
-    // }
-    // printf("Loaded custom input for last layer\n");
-
+    if (test != 0) {
+        const char *filename_load = "last_layer_input_7.bin";
+        layer last_layer = net.layers[net.n - 2];
+        float *custom_input = load_layer_input_from_file(filename_load, last_layer.outputs * last_layer.batch);
+        if (!custom_input) {
+            fprintf(stderr, "Error loading custom input from file: %s\n", filename_load);
+            return;
+        }
+        printf("Loaded custom input for last layer\n");
+    }
+    
     int i;
     for(i = 0; i < net.n; ++i){
         state.index = i;
@@ -330,21 +333,24 @@ void forward_network(network net, network_state state) {
         
         state.input = l.output;
         
-        if (i == net.n - 2) {
-                const char *filename_save = "last_layer_input_7.txt";
-                save_layer_input_to_file(state.input, l.outputs * l.batch, filename_save);
+        if (test == 0) {
+            if (i == net.n - 2) {
+                    const char *filename_save = "last_layer_input_1.bin";
+                    save_layer_input_to_file(state.input, l.outputs * l.batch, filename_save);
+            }
         }
-        
-        // if (i == net.n - 2) {
-        //     memcpy(l.output, custom_input, last_layer.outputs * last_layer.batch * sizeof(float));
-        //     state.input = custom_input;
-        //     printf("Replaced last layer input at layer %d at %s\n", i, filename_load);
-        // } else {
-        //     state.input = l.output;
-        // }
+        else {
+            if (i == net.n - 2) {
+                memcpy(l.output, custom_input, last_layer.outputs * last_layer.batch * sizeof(float));
+                state.input = custom_input;
+                printf("Replaced last layer input at layer %d at %s\n", i, filename_load);
+            } else {
+                state.input = l.output;
+            }
+        }
     }
 
-    // free(custom_input);
+    if (test != 0) free(custom_input);
 }
 
 void update_network(network net)
